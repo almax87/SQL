@@ -9,7 +9,7 @@ class clientdb{
         "port=5432 "
         "dbname=client_manager "
         "user=postgres "
-        "password=Nofagem2211_"};
+        "password=1234"};
 
     public:
         clientdb(){}
