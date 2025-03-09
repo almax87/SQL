@@ -3,9 +3,9 @@
 #include "queries.cpp"
 #include <iterator>
 
-void clientdb::create_clientdb()
+void ClientManager::initDbStructure()
 {
-    pqxx::work tx(clientdb::c);
+    pqxx::work tx(ClientManager::c);
     tx.exec("CREATE TABLE IF NOT EXISTS clients("
         "id SERIAL PRIMARY KEY, "
         "name VARCHAR(80) NOT NULL, "
@@ -15,187 +15,98 @@ void clientdb::create_clientdb()
     tx.commit();
 }
 
-void clientdb::add_new_client()
+void ClientManager::addClient(const std::string& firstName, const std::string& lastName, 
+                                const std::string& email, const std::string& phoneNumber)
 {
-    int count {1};
     int id{};
-    pqxx::work tx(clientdb::c);
-    std::string name, sec_name, email, phone{};
+    pqxx::work tx(ClientManager::c);
     std::string input{};
-    std::cout << "Введите имя клиента: ";
-    std::getline(std::cin, name);
-    std::cout << "Введите фамилию клиента: ";
-    std::getline(std::cin, sec_name);
-    std::cout << "Введите email клиента: ";
-    std::getline(std::cin, email);
-    
-    tx.exec("INSERT INTO clients (name, second_name, email) "
-            "VALUES('" + tx.esc(name) + "', '" + tx.esc(sec_name) + "', '" +
-            tx.esc(email) + "');");
 
-    id = tx.query_value<int>("SELECT id FROM clients WHERE email='" + email + "';");
-    while (true)
-    {
-        std::cout << "Введите номер телефона клиента (0 для выхода): ";
-        std::getline(std::cin, input);
-        if (input == std::to_string(0))
-        {
-            break;
-        }
-        else
-        {
-            if(!check_column(tx,count))
-            {
-                add_column(tx,count);
-            }
-            set_phone(tx, count, id, input);
-            count++;
-        }
-        input.clear();
-    };
+    tx.exec("INSERT INTO clients (name, second_name, email, phone1) "
+            "VALUES('" + tx.esc(firstName) + "', '" + tx.esc(lastName) + "', '" +
+            tx.esc(email) + "', '" + tx.esc(phoneNumber) + "');");
     tx.commit();
 }
 
-void clientdb::add_phone_to_client()
+void ClientManager::addPhoneNumber(int id, int& count, std::string& phoneNumber)
 {
-    pqxx::work tx{c};
-    int id{};
-    std::cout << "Введите id клиента для добавления контактного номера: ";
-    std::cin >> id;
-    std::cin.get();
-    int count{1};
-    std::string phone_number{};
-    std::cout << "Введите номер телефона клиента: ";
-    std::getline (std::cin, phone_number);
-    if (check_empty(tx, count))
-        {
-            set_phone(tx, count, id, phone_number);
-            phone_number.clear();
-        }
-    else
-        {
-            while (true)
+    pqxx::work tx(ClientManager::c);
+    while (true)
+    {
+        if (!check_column(tx, count))
+            add_column(tx,count);
+        if (check_empty)
             {
-                count++;
-                if (!check_column(tx, count))
-                    {
-                        add_column(tx,count);
-                    }
-
-                if (check_empty(tx, count))
-                {
-                    set_phone(tx, count, id, phone_number);
-                }
-                else
-                    continue;
+                set_phone(tx, count, id, phoneNumber);
+                break;
             }
-        };
-        tx.commit();
+        else
+            count++;
+    }
+    tx.commit();  
 }
 
-
-void clientdb::update_client()
+void ClientManager::updateClient(int id, const std::string& val, const std::string& param)
 {
-    int id{};
-    std::string param{}, val{};
-    pqxx::work tx{c};
-    std::cout << "Введите id клиента для изменения данных: ";
-    std::cin >> id;
-    std::cin.get();
-    std::cout << "Введите поле, которое хотите изменить : ";
-    std::getline(std::cin, param);
-    std::cout << "Введите новое значение: ";
-    std::getline (std::cin, val);
+    pqxx::work tx{ClientManager::c};
     tx.exec("UPDATE clients SET " + tx.esc(param) + "='" + tx.esc(val) + "' "
             "WHERE id=" + tx.esc(std::to_string(id)) +";");
     tx.commit();
 }
 
-void clientdb::remove_client()
+void ClientManager::removeClient(int id)
 {
-    int id{};
-    pqxx::work tx{c};
-    std::cout << "Введите id клиента для удаления: ";
-    std::cin >> id;
-    std::cin.get();
+    pqxx::work tx{ClientManager::c};
+
     tx.exec("DELETE FROM clients "
             "WHERE id=" + tx.esc(std::to_string(id)) +";");
     tx.commit();
 }
 
-void clientdb::remove_contacts()
+void ClientManager::removeContacts(int id)
 {
-    int id{};
     int count{1};
     std::string val{"null"};
-    pqxx::work tx{c};
-    std::cout << "Введите id клиента для удаления телефона: ";
-    std::cin >> id;
-    std::cin.get();
+    pqxx::work tx{ClientManager::c};
     while(true)
     {
-        if (check_empty(tx, count))
+        if (check_empty(tx,count))
         {
             set_phone(tx, count, id, val);
         }
-        else
-            continue;
         count++;
         if (!check_column(tx,count))
             break;
+        else
+            continue;   
     };
     tx.commit();
 }
 
-void clientdb::find_client_by_name()
+std::vector<int>& ClientManager::findByName(const std::string& firstName, const std::string& lastName, std::vector<int>& id_list)
 {
-    int count{};
-    std::string name{}, sec_name{}, email{}, phone{};
-    pqxx::work tx{c};
-    std::cout << "Введите имя клиента : ";
-    std::getline(std::cin, name);
-    std::cout << "Введите фамилию клиента: ";
-    std::getline (std::cin, sec_name);
-    for (auto[id]: tx.query<int>("SELECT id FROM clients WHERE name = '" + tx.esc(name) + "' AND second_name = '" + tx.esc(sec_name) + "';"))
+    id_list.clear();
+    pqxx::work tx{ClientManager::c};
+    for (auto[id]: tx.query<int>("SELECT id FROM clients WHERE name = '" + tx.esc(firstName) + "' AND second_name = '" + tx.esc(lastName) + "';"))
     {
-        std::cout << "Найден клиент id " << id << std::endl;
-        count++;
+        id_list.push_back(id);
     }
-    if (count == 0)
-        std::cout << "Поиск не дал результатов" << std::endl;
     tx.commit();
+    return id_list;
 }
 
-void clientdb::find_client_by_email()
+int ClientManager::findByEmail(const std::string& email)
 {
-    int count{};
-    std::string email{};
-    pqxx::work tx{c};
-    std::cout << "Введите email клиента : ";
-    std::getline(std::cin, email);
-    for (auto[id]: tx.query<int>("SELECT id FROM clients WHERE email = '" + tx.esc(email) + "';"))
-    {
-        std::cout << "Найден клиент id " << id << std::endl;
-        count++;
-    }
-    if (count == 0)
-        std::cout << "Поиск не дал результатов" << std::endl;
+    pqxx::work tx{ClientManager::c};
+    auto res = tx.exec("SELECT id FROM clients WHERE email = '" + tx.esc(email) + "';");
     tx.commit();
+    return res[0][0].as<int>();
 }
 
-void clientdb::find_client_by_phone()
+int ClientManager::findByPhone(const std::string& phoneNumber)
 {
-    int count{};
-    std::string phone{};
-    pqxx::work tx{c};
-    std::cout << "Введите телефон клиента : ";
-    std::getline(std::cin, phone);
-    for (auto[id]: tx.query<int>("SELECT id FROM clients WHERE phone = '" + tx.esc(phone) + "';"))
-    {
-        std::cout << "Найден клиент id " << id << std::endl;
-        count++;
-    }
-    if (count == 0)
-        std::cout << "Поиск не дал результатов" << std::endl;
+    pqxx::work tx{ClientManager::c};
+    auto res = tx.exec("SELECT id FROM clients WHERE phone1 = '" + tx.esc(phoneNumber) + "';");
     tx.commit();
+    return res[0][0].as<int>();
 }

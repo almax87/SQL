@@ -6,17 +6,16 @@ inline void add_column(pqxx::work& tx, int count)
     tx.exec( "ALTER TABLE clients ADD COLUMN phone" + tx.esc(std::to_string(count)) + " VARCHAR(80); ");
 }
 
-inline bool check_empty(pqxx::work& tx, int count)
+bool check_empty(pqxx::work& tx, int count)
 {
     auto res = tx.exec("SELECT (phone" + tx.esc(std::to_string(count)) + " IS NULL OR phone" + tx.esc(std::to_string(count)) + " = '') AS is_empty "
                                             "FROM clients;");
-    return res[0][0].as<bool>();
+    bool check = res[0][0].as<bool>();
+    return check;
 }
 
-inline bool check_column(pqxx::work& tx, int count)
+bool check_column(pqxx::work& tx, int count)
 {
-    if (count == 0)
-        std::to_string(count) = ' ';
     pqxx::result res = tx.exec("SELECT EXISTS("
                                 "SELECT 1 "
                                 "FROM information_schema.columns "
