@@ -12,7 +12,7 @@ int main()
         std::getline(std::cin, pass);
         ClientManager *clientManager = new ClientManager(pass);
 
-        /*inputClientData(firstName, lastName, email, phoneNumber);
+        inputClientData(firstName, lastName, email, phoneNumber);
         clientManager->addClient(firstName, lastName, email, phoneNumber);
 
         inputClientPhone(id, phoneNumber, clientManager);
@@ -25,7 +25,7 @@ int main()
         clientManager->removeClient(id);
 
         inputIdToRemoveContacts(id);
-        clientManager->removeContacts(id);*/
+        clientManager->removeContacts(id);
 
         inputDataToFindByName(firstName, lastName);
         clientManager->findByName(firstName, lastName, id_list);
